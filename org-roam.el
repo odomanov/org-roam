@@ -498,13 +498,15 @@ PATH should be the root from which to compute the relativity."
       (while (re-search-forward re (point-max) t)
         (goto-char (match-beginning 2))
         ;; Strip 'file:'
-        (setq link (match-string 2))
-        ;; Delete relative link
-        (when (and (f-relative-p link)
-                   (org-roam--org-roam-file-p (expand-file-name link dir)))
-          (delete-region (match-beginning 2)
-                         (match-end 2))
-          (insert (expand-file-name link dir))))
+        (setq link (match-string 2))     
+        (let ((link-beg (match-beginning 2))
+              (link-end (match-end 2))
+              (expanded-name (expand-file-name link dir)))
+          ;; Delete relative link
+          (when (and (f-relative-p link)
+                     (gethash expanded-name (org-roam-db--get-current-files)))
+            (delete-region link-beg link-end)
+            (insert expanded-name))))
       (buffer-string))))
 
 (defun org-roam--get-outline-path ()
