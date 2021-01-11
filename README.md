@@ -2,6 +2,8 @@
 [![GitHub Release](https://img.shields.io/github/v/release/org-roam/org-roam)](https://img.shields.io/github/v/release/org-roam/org-roam)
 [![MELPA](https://melpa.org/packages/org-roam-badge.svg)](https://melpa.org/#/org-roam)
 
+A fork, using filestore-git for cache. Based on v1.2.2.
+
 ## Synopsis
 
 > **NOTE:** Org-roam builds upon Emacs and Org-mode, both of which are intricate
