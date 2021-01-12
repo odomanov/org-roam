@@ -36,6 +36,7 @@
 
 (require 'ol)
 (require 'org-roam-compat)
+(require 'filestore-git)
 
 (defvar org-roam-completion-ignore-case)
 (defvar org-roam-directory)
@@ -81,9 +82,9 @@ noabbrev  Absolute path, no abbreviation of home directory."
            (org-goto-marker-or-bmk mkr)))))
 
 ;;; Retrieval Functions
-(defun org-roam-link--get-titles ()
-  "Return all titles within Org-roam."
-  (mapcar #'car (org-roam-db-query [:select [titles:title] :from titles])))
+;; (defun org-roam-link--get-titles ()
+;;   "Return all titles within Org-roam."
+;;   (mapcar #'car (org-roam-db-query [:select [titles:title] :from titles])))  ;; TODO: filestore
 
 (defun org-roam-link--get-headlines (&optional file with-marker use-stack)
   "Return all outline headings for the current buffer.
@@ -125,18 +126,19 @@ If USE-STACK, include the parent paths as well."
                     name) cands)))))
     (nreverse cands)))
 
-(defun org-roam-link--get-file-from-title (title &optional no-interactive)
-  "Return the file path corresponding to TITLE.
-When NO-INTERACTIVE, return nil if there are multiple options."
-  (let ((files (mapcar #'car (org-roam-db-query [:select [titles:file] :from titles
-                                                 :where (= titles:title $v1)]
-                                                (vector title)))))
-    (pcase files
-      ('nil nil)
-      (`(,file) file)
-      (_
-       (unless no-interactive
-         (completing-read "Select file: " files))))))
+;; TODO: filestore
+;; (defun org-roam-link--get-file-from-title (title &optional no-interactive)
+;;   "Return the file path corresponding to TITLE.
+;; When NO-INTERACTIVE, return nil if there are multiple options."
+;;   (let ((files (mapcar #'car (org-roam-db-query [:select [titles:file] :from titles
+;;                                                  :where (= titles:title $v1)]
+;;                                                 (vector title)))))
+;;     (pcase files
+;;       ('nil nil)
+;;       (`(,file) file)
+;;       (_
+;;        (unless no-interactive
+;;          (completing-read "Select file: " files))))))
 
 (defun org-roam-link--get-id-from-headline (headline &optional file)
   "Return (marker . id) correspondng to HEADLINE.

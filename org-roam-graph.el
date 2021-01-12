@@ -159,6 +159,7 @@ If WRAP-VAL is non-nil it wraps the VAL."
           "="
           wrap-val (cdr option) wrap-val))
 
+;; TODO: filestore
 (defun org-roam-graph--dot (node-query)
   "Build the graphviz dot string for NODE-QUERY.
 The Org-roam database titles table is read, to obtain the list of titles.
@@ -221,6 +222,7 @@ into a digraph."
       (insert "}")
       (buffer-string))))
 
+;; TODO: filestore
 (defun org-roam-graph--build (&optional node-query callback)
   "Generate a graph showing the relations between nodes in NODE-QUERY.
 Execute CALLBACK when process exits successfully.
@@ -261,6 +263,7 @@ CALLBACK is passed the graph file as its sole argument."
     ('nil (view-file file))
     (_ (signal 'wrong-type-argument `((functionp stringp null) ,org-roam-graph-viewer)))))
 
+;; TODO: filestore
 (defun org-roam-graph--build-connected-component (file &optional max-distance callback)
   "Build a graph of nodes connected to FILE.
 If MAX-DISTANCE is non-nil, limit nodes to MAX-DISTANCE steps.
