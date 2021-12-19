@@ -426,10 +426,13 @@ If UPDATE-P is non-nil, first remove the file in the database."
     (goto-char (org-element-property :begin link))
     (let ((type (org-element-property :type link))
           (path (org-element-property :path link))
+          (extra-attrs (org-element-property :extra-attrs link))
           (properties (list :outline (ignore-errors
                                        ;; This can error if link is not under any headline
                                        (org-get-outline-path 'with-self 'use-cache))))
           (source (org-roam-id-at-point)))
+      (if extra-attrs
+          (setq properties (append properties (list :extra-attrs extra-attrs))))
       ;; For Org-ref links, we need to split the path into the cite keys
       (when (and (boundp 'org-ref-cite-types)
                  (fboundp 'org-ref-split-and-strip-string)
