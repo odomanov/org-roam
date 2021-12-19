@@ -316,4 +316,41 @@ E.g. (\".org\") => (\"*.org\" \"*.org.gpg\")"
   (require 'org-roam-mode)
   (require 'org-roam-migrate))
 
+
+;;;  Link properties (for 'id' links only)
+;;;  Cf: https://linevi.ch/en/org-link-extra-attrs.html
+
+(defun odm/org-link-extra-attrs (orig-fun &rest args)
+  "Post processor for parsing links"
+  (setq parser-result orig-fun)
+
+  ;;; Retrieving inital values that should be replaced
+  (setq raw-path (plist-get (nth 1 parser-result) :raw-link))
+
+  ;; Checking if link match the regular expression
+  (if (string-match-p "^id:.*|\s?:" raw-path)
+      (progn
+	;; Retrieving parameters after the vertical bar
+	(setq results (s-split "|" raw-path))
+	(setq raw-path (car results))
+	(setq path (s-chop-prefix "id:" raw-path))
+
+	;; Splitting elements by colon and remove any empty values
+	(setq results (--drop-while (< (length it) 1)
+				    (s-split ":" (car (-slice results 1)))))
+	;; Splitting key and value and trimming any spaces
+	(setq results (--map  (s-split-up-to "\s" (s-trim it) 1) results))
+
+	;; Updating the ouput with the new values
+	(setq orig-fun-cleaned (plist-put (nth 1 orig-fun) :raw-link raw-path))
+	(setq orig-fun-cleaned (plist-put orig-fun-cleaned :path path))
+
+	(list 'link
+	      (-snoc orig-fun-cleaned :extra-attrs results)))
+
+    ;; Or returning original value of the function
+    orig-fun))
+
+(advice-add 'org-element-link-parser :filter-return #'odm/org-link-extra-attrs)
+
 ;;; org-roam.el ends here
