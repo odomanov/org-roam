@@ -328,10 +328,10 @@ E.g. (\".org\") => (\"*.org\" \"*.org.gpg\")"
   (setq raw-path (plist-get (nth 1 parser-result) :raw-link))
 
   ;; Checking if link match the regular expression
-  (if (string-match-p "^id:.*|\s?:" raw-path)
+  (if (string-match-p "^id:.*!\s?:" raw-path)
       (progn
 	;; Retrieving parameters after the vertical bar
-	(setq results (s-split "|" raw-path))
+	(setq results (s-split "!" raw-path))
 	(setq raw-path (car results))
 	(setq path (s-chop-prefix "id:" raw-path))
 
