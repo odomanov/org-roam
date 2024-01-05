@@ -112,6 +112,39 @@ that are excluded from identification in Org-roam as
            nconc (org-roam-list-files) into files
            finally (org-id-update-id-locations files org-roam-verbose)))
 
+(defun odm/org-link-extra-attrs (orig-result)
+  "Advice function to post process ORIG-RESULT of the `org-element-link-parser' function."
+  ;;; Retrieving inital values that should be replaced
+  (setq raw-path (plist-get (nth 1 orig-result) :raw-link))
+
+  ;; Checking if the link is an `id:' link
+  (if (string-match-p "^id:.*|\s*:" raw-path)
+      (let* (;; Retrieving parameters after the vertical bar
+             (results (s-split "|" raw-path))
+             (raw-path (car results))
+             (path (s-chop-prefix "id:" raw-path))
+
+             ;; Cleaning, splitting and making symbols
+             (results (s-split "\s" (s-trim (s-collapse-whitespace
+                                             (car (-slice results 1))))))
+             (results (-map #'intern results))
+
+             ;; Updating the ouput with the new values
+             (orig-result-clean (plist-put (nth 1 orig-result) :raw-link raw-path))
+             (orig-result-clean (plist-put orig-result-clean :path path)))
+
+        ;; Check that the length is even
+        (if (= 2 (length (-last-item (-partition-all 2 results))))
+            (list 'link (-snoc orig-result-clean :extra-attrs results))
+          (progn
+            (message "Links properties are incorrect. Ignoring them.")
+            (list 'link orig-result-clean))))
+
+    ;; Or returning original value of the function
+    orig-result))
+
+(advice-add 'org-element-link-parser :filter-return #'odm/org-link-extra-attrs)
+
 (provide 'org-roam-id)
 
 ;;; org-roam-id.el ends here

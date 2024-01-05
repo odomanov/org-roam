@@ -563,6 +563,7 @@ INFO is the org-element parsed buffer."
     (let ((type (org-element-property :type link))
           (path (org-element-property :path link))
           (source (org-roam-id-at-point))
+          (extra-attrs (org-element-property :extra-attrs link))
           (properties (list :outline (ignore-errors
                                        ;; This can error if link is not under any headline
                                        (org-get-outline-path 'with-self 'use-cache)))))
@@ -576,6 +577,8 @@ INFO is the org-element parsed buffer."
               :values $v1]
              (mapcar (lambda (k) (vector source k (point) properties))
                      (org-roam-org-ref-path-to-keys path)))
+          (when extra-attrs
+            (setq properties (append properties extra-attrs)))
           (org-roam-db-query
            [:insert :into links
             :values $v1]
