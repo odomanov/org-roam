@@ -118,7 +118,8 @@ that are excluded from identification in Org-roam as
   (setq raw-path (plist-get (nth 1 orig-result) :raw-link))
 
   ;; Checking if the link is an `id:' link
-  (if (string-match-p "^id:.*|\s*:" raw-path)
+  (if (and raw-path
+           (string-match-p "^id:.*|\s*:" raw-path))
       (let* (;; Retrieving parameters after the vertical bar
              (results (s-split "|" raw-path))
              (raw-path (car results))
