@@ -80,41 +80,50 @@ Comparison functions are `string<' and `'string='."
 
 (defun org-roam-props--mk-prop-candidates (filtered)
   ""
-  (-map (lambda (x)
-          (let ((str (concat (propertize (format ":%s: " (elt x 0))
-                                         'face 'org-roam-props--property-face)
-                             (elt x 1))))
-            (cons str x)))
-        filtered))
+  (--map (let ((str (concat (propertize (format ":%s: " (elt it 0))
+                                        'face 'org-roam-props--property-face)
+                            (elt it 1))))
+           (cons str it))
+         filtered))
 
-(defun org-roam-props--mk-val-candidates (v filtered)
+(defun org-roam-props--mk-val-candidates (filtered)
   ""
-  (let ((flt (-filter (lambda (x) (string= (cadr v) (cadr x)))
-                      filtered)))
-    (-map (lambda (x)
-            (let ((str (concat (propertize
-                                (format ":%s: " (string-join `(,(elt x 0) ,(elt x 1)) ":"))
-                                'face 'org-roam-props--property-face)
-                               (org-roam-node-title (org-roam-node-from-id (elt x 2))))))
-              (cons str x)))
-          flt)))
+  (--map (let ((str (concat (propertize
+                             (format ":%s: " (string-join (list (elt it 0) (elt it 1)) ":"))
+                             'face 'org-roam-props--property-face)
+                            (org-roam-node-title (org-roam-node-from-id (elt it 2))))))
+           (cons str it))
+         filtered))
 
 (defun org-roam-search-property ()
   "Search properties interactively."
   (interactive)
-  (let* ((props (org-roam-props--completions))
-         (prop (completing-read "Property: " (odm/sort-uniq 0 props)))
-         (filtered (-filter (lambda (x) (equal (car x) prop)) props))
-         )
-    (helm :sources (helm-build-sync-source "Properties"
-                     :candidates (odm/sort-uniq 2 (org-roam-props--mk-prop-candidates filtered))
-                     :action (lambda (v)
-                               (helm :sources
-                                     (helm-build-sync-source "Values"
-                                       :candidates
-                                       (odm/sort-uniq 3 (org-roam-props--mk-val-candidates v filtered))
-                                       :action (lambda (x)
-                                                 (org-roam-node-open (org-roam-node-from-id (elt x 2)))))))))))
+  (let* ((props (org-roam-props--completions)))
+    (helm
+     :sources (helm-build-sync-source "Properties"
+                :candidates (odm/sort-uniq 0 (--map (cons (car it) it) props))
+                :action
+                (lambda (_)
+                  (let* ((pcands (helm-marked-candidates))
+                         (pcands (-map #'car pcands))
+                         (pflt (--filter (member (car it) pcands) props)))
+                    (helm
+                     :sources (helm-build-sync-source "Values"
+                                :candidates (odm/sort-uniq 2 (org-roam-props--mk-prop-candidates pflt))
+                                :action
+                                (lambda (_)
+                                  (let* ((vcands (helm-marked-candidates))
+                                         (vcands (-map #'cadr vcands))
+                                         (vflt (--filter (member (cadr it) vcands) pflt)))
+                                    (helm
+                                     :sources (helm-build-sync-source "Pages"
+                                                :nomark t
+                                                :candidates (odm/sort-uniq 3 (org-roam-props--mk-val-candidates vflt))
+                                                :action
+                                                (lambda (x)
+                                                  (org-roam-node-open (org-roam-node-from-id (elt x 2)))))))))
+                     :buffer "*helm Prop search"
+                     :prompt "Select page: ")))))))
 
 
 (provide 'org-roam-prop-search)
