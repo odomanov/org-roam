@@ -56,18 +56,18 @@
   :group 'org-roam-faces)
 
 (defun org-roam-props--completions ()
-  "Make list [prop,value,file] from list [properties,file]."
-  (let* ((props+files (org-roam-db-query [:select [properties,file] :from nodes]))
-         (to-filter org-roam-props-to-filter)
-         (raw-lst (seq-mapcat (lambda (props+file)
+  "Make list [prop,value,id] from list [properties,id]."
+  (let* ((props+ids (org-roam-db-query [:select [properties,id] :from nodes]))
+         ;; (to-filter org-roam-props-to-filter)
+         (raw-lst (seq-mapcat (lambda (props+id)
                                 (seq-mapcat (lambda (prop)
                                               (mapcar (lambda (x)
-                                                        (list (car prop) x (cadr props+file)))
+                                                        (list (car prop) x (cadr props+id)))
                                                       (split-string-and-unquote (cdr prop))))
-                                            (car props+file)))
-                              props+files)))
+                                            (car props+id)))
+                              props+ids)))
     (seq-remove (lambda (p)
-                  (member (car p) to-filter))
+                  (member (car p) org-roam-props-to-filter))
                 raw-lst)))
 
 (defun odm/sort-uniq (n lst)
@@ -95,7 +95,7 @@ Comparison functions are `string<' and `'string='."
             (let ((str (concat (propertize
                                 (format ":%s: " (string-join `(,(elt x 0) ,(elt x 1)) ":"))
                                 'face 'org-roam-props--property-face)
-                               (file-name-base (elt x 2)))))
+                               (org-roam-node-title (org-roam-node-from-id (elt x 2))))))
               (cons str x)))
           flt)))
 
@@ -106,22 +106,15 @@ Comparison functions are `string<' and `'string='."
          (prop (completing-read "Property: " (odm/sort-uniq 0 props)))
          (filtered (-filter (lambda (x) (equal (car x) prop)) props))
          )
-    (pcase prop
-      ("title" (let* ((vals (-map #'cdr filtered))
-                      (val (completing-read (concat prop ": ") vals)))
-                 (find-file (concat org-roam-directory "/"
-                                    (cadr (-find (lambda (v)
-                                                      (string= val (car v)))
-                                                    vals))))))
-      (_ (helm :sources (helm-build-sync-source "Properties"
-                          :candidates (odm/sort-uniq 2 (org-roam-props--mk-prop-candidates filtered))
-                          :action (lambda (v)
-                                    (helm :sources
-                                          (helm-build-sync-source "Values"
-                                            :candidates
-                                            (odm/sort-uniq 3 (org-roam-props--mk-val-candidates v filtered))
-                                            :action (lambda (f) (find-file (elt f 2)))))))))
-      )))
+    (helm :sources (helm-build-sync-source "Properties"
+                     :candidates (odm/sort-uniq 2 (org-roam-props--mk-prop-candidates filtered))
+                     :action (lambda (v)
+                               (helm :sources
+                                     (helm-build-sync-source "Values"
+                                       :candidates
+                                       (odm/sort-uniq 3 (org-roam-props--mk-val-candidates v filtered))
+                                       :action (lambda (x)
+                                                 (org-roam-node-open (org-roam-node-from-id (elt x 2)))))))))))
 
 
 (provide 'org-roam-prop-search)
