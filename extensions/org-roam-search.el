@@ -1,4 +1,4 @@
-;;; org-roam-prop-search.el --- Org-roam property search interface -*- coding: utf-8; lexical-binding: t; -*-
+;;; org-roam-search.el --- Org-roam property search interface -*- coding: utf-8; lexical-binding: t; -*-
 
 ;; Copyright © 2020-2022 Jethro Kuan <jethrokuan95@gmail.com>
 
@@ -31,7 +31,7 @@
 ;;
 ;; To enable it, run:
 ;;
-;;    (require 'org-roam-prop-search)
+;;    (require 'org-roam-search)
 ;;
 ;;
 ;;; Code:
@@ -42,23 +42,23 @@
 (require 'ol)
 (require 'dash)
 
-(defcustom org-roam-props-to-filter
+(defcustom org-roam-search-to-filter
   '("CATEGORY" "ITEM" "FILE" "ALLTAGS" "ID" "PRIORITY" "TITLE"
     "REL" "TAGS" "TODO")
   "Properties to filter."
   :group 'org-roam)
 
-(defface org-roam-props--property-face
+(defface org-roam-search--property-face
     '((t (:foreground "blue"
           :weight bold
           )))
   "Face for 'properties' in search."
   :group 'org-roam-faces)
 
-(defun org-roam-props--completions ()
+(defun org-roam-search--completions ()
   "Make list [prop,value,id] from list [properties,id]."
   (let* ((props+ids (org-roam-db-query [:select [properties,id] :from nodes]))
-         ;; (to-filter org-roam-props-to-filter)
+         ;; (to-filter org-roam-search-to-filter)
          (raw-lst (seq-mapcat (lambda (props+id)
                                 (seq-mapcat (lambda (prop)
                                               (mapcar (lambda (x)
@@ -67,7 +67,7 @@
                                             (car props+id)))
                               props+ids)))
     (seq-remove (lambda (p)
-                  (member (car p) org-roam-props-to-filter))
+                  (member (car p) org-roam-search-to-filter))
                 raw-lst)))
 
 (defun odm/sort-uniq (n lst)
@@ -78,29 +78,29 @@ Comparison functions are `string<' and `'string='."
                               (string= (elt x n) (elt y n)))))
            (-uniq lst))))
 
-(defun org-roam-props--mk-prop-candidates (filtered)
+(defun org-roam-search--mk-prop-candidates (filtered)
   ""
   (--map (let ((str (concat (propertize (format ":%s: " (elt it 0))
-                                        'face 'org-roam-props--property-face)
+                                        'face 'org-roam-search--property-face)
                             (elt it 1))))
            (cons str it))
          filtered))
 
-(defun org-roam-props--mk-val-candidates (filtered)
+(defun org-roam-search--mk-val-candidates (filtered)
   ""
   (--map (let ((str (concat (propertize
                              (format ":%s: " (string-join (list (elt it 0) (elt it 1)) ":"))
-                             'face 'org-roam-props--property-face)
+                             'face 'org-roam-search--property-face)
                             (org-roam-node-title (org-roam-node-from-id (elt it 2))))))
            (cons str it))
          filtered))
 
-(defun org-roam-props--mk-tag-candidates (filtered)
+(defun org-roam-search--mk-tag-candidates (filtered)
   ""
   (--map (let* ((title (org-roam-node-title (org-roam-node-from-id (elt it 1))))
                 (str (concat (propertize
                              (format ":%s: " (elt it 0))
-                             'face 'org-roam-props--property-face)
+                             'face 'org-roam-search--property-face)
                             title)))
            (cons str (cons title it)))
          filtered))
@@ -108,7 +108,7 @@ Comparison functions are `string<' and `'string='."
 (defun org-roam-search-property ()
   "Search properties interactively."
   (interactive)
-  (let* ((props (org-roam-props--completions)))
+  (let* ((props (org-roam-search--completions)))
     (helm
      :sources (helm-build-sync-source "Properties"
                 :candidates (odm/sort-uniq 0 (--map (cons (car it) it) props))
@@ -119,7 +119,7 @@ Comparison functions are `string<' and `'string='."
                          (pflt (--filter (member (car it) pcands) props)))
                     (helm
                      :sources (helm-build-sync-source "Values"
-                                :candidates (odm/sort-uniq 2 (org-roam-props--mk-prop-candidates pflt))
+                                :candidates (odm/sort-uniq 2 (org-roam-search--mk-prop-candidates pflt))
                                 :action
                                 (lambda (_)
                                   (let* ((vcands (helm-marked-candidates))
@@ -128,7 +128,7 @@ Comparison functions are `string<' and `'string='."
                                     (helm
                                      :sources (helm-build-sync-source "Pages"
                                                 :nomark t
-                                                :candidates (odm/sort-uniq 3 (org-roam-props--mk-val-candidates vflt))
+                                                :candidates (odm/sort-uniq 3 (org-roam-search--mk-val-candidates vflt))
                                                 :action
                                                 (lambda (x)
                                                   (org-roam-node-open (org-roam-node-from-id (elt x 2)))))))))
@@ -138,24 +138,35 @@ Comparison functions are `string<' and `'string='."
 (defun org-roam-search-tags ()
   "Search by tags."
   (interactive)
-  (let* ((tags (org-roam-db-query [:select [tag node-id] :from tags])))
-    (helm
-     :sources (helm-build-sync-source "Tags"
-                :candidates (odm/sort-uniq 0 (--map (cons (car it) it) tags))
-                :action
-                (lambda (_)
-                  (let* ((tcands (helm-marked-candidates))
-                         (tcands (-map #'car tcands))
-                         (tflt (--filter (member (car it) tcands) tags)))
-                    (helm
-                     :sources (helm-build-sync-source "Pages"
-                                :nomark t
-                                :candidates (odm/sort-uniq 1 (org-roam-props--mk-tag-candidates tflt))
-                                :action
-                                (lambda (x)
-                                  (org-roam-node-open (org-roam-node-from-id (elt x 2)))))))))
-     :buffer "*helm Tag search*"
-     :prompt "Select tags: ")))
+  (setq odm/tags (org-roam-db-query [:select [tag node-id] :from tags]))
+  (helm
+   :sources (helm-build-sync-source "Tags"
+              :candidates (odm/sort-uniq 0 (--map (cons (car it) it) odm/tags))
+              :action
+              '(("Include" . (lambda (_)
+                               (let* ((tcands (helm-marked-candidates))
+                                      (tcands (-map #'car tcands))
+                                      (tflt (--filter (member (car it) tcands) odm/tags)))
+                                 (helm
+                                  :sources (helm-build-sync-source "Pages"
+                                             :nomark t
+                                             :candidates (odm/sort-uniq 1 (org-roam-search--mk-tag-candidates tflt))
+                                             :action
+                                             (lambda (x)
+                                               (org-roam-node-open (org-roam-node-from-id (elt x 2)))))))))
+                ("Exclude" . (lambda (_)
+                               (let* ((tcands (helm-marked-candidates))
+                                      (tcands (-map #'car tcands))
+                                      (tflt (--remove (member (car it) tcands) odm/tags)))
+                                 (helm
+                                  :sources (helm-build-sync-source "Pages"
+                                             :nomark t
+                                             :candidates (odm/sort-uniq 1 (org-roam-search--mk-tag-candidates tflt))
+                                             :action
+                                             (lambda (x)
+                                               (org-roam-node-open (org-roam-node-from-id (elt x 2)))))))))))
+   :buffer "*helm Tag search*"
+   :prompt "Select tags: "))
 
-(provide 'org-roam-prop-search)
-;;; org-roam-prop-search.el ends here
+(provide 'org-roam-search)
+;;; org-roam-search.el ends here
