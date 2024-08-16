@@ -132,7 +132,7 @@ Comparison functions are `string<' and `'string='."
                                                 :action
                                                 (lambda (x)
                                                   (org-roam-node-open (org-roam-node-from-id (elt x 2)))))))))
-                     :buffer "*helm Prop search"
+                     :buffer "*helm Prop search*"
                      :prompt "Select page: ")))))))
 
 (defun org-roam-search-tags ()
