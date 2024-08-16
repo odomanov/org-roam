@@ -95,6 +95,16 @@ Comparison functions are `string<' and `'string='."
            (cons str it))
          filtered))
 
+(defun org-roam-props--mk-tag-candidates (filtered)
+  ""
+  (--map (let* ((title (org-roam-node-title (org-roam-node-from-id (elt it 1))))
+                (str (concat (propertize
+                             (format ":%s: " (elt it 0))
+                             'face 'org-roam-props--property-face)
+                            title)))
+           (cons str (cons title it)))
+         filtered))
+
 (defun org-roam-search-property ()
   "Search properties interactively."
   (interactive)
@@ -125,6 +135,27 @@ Comparison functions are `string<' and `'string='."
                      :buffer "*helm Prop search"
                      :prompt "Select page: ")))))))
 
+(defun org-roam-search-tags ()
+  "Search by tags."
+  (interactive)
+  (let* ((tags (org-roam-db-query [:select [tag node-id] :from tags])))
+    (helm
+     :sources (helm-build-sync-source "Tags"
+                :candidates (odm/sort-uniq 0 (--map (cons (car it) it) tags))
+                :action
+                (lambda (_)
+                  (let* ((tcands (helm-marked-candidates))
+                         (tcands (-map #'car tcands))
+                         (tflt (--filter (member (car it) tcands) tags)))
+                    (helm
+                     :sources (helm-build-sync-source "Pages"
+                                :nomark t
+                                :candidates (odm/sort-uniq 1 (org-roam-props--mk-tag-candidates tflt))
+                                :action
+                                (lambda (x)
+                                  (org-roam-node-open (org-roam-node-from-id (elt x 2)))))))))
+     :buffer "*helm Tag search*"
+     :prompt "Select tags: ")))
 
 (provide 'org-roam-prop-search)
 ;;; org-roam-prop-search.el ends here
