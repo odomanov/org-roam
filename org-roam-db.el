@@ -195,6 +195,7 @@ Performs a database upgrade when required."
       (make-directory (file-name-directory org-roam-db-location) t)
       (let ((conn (funcall (org-roam-db--conn-fn) org-roam-db-location)))
         (emacsql conn [:pragma (= foreign_keys ON)])
+        (emacsql conn "PRAGMA journal_mode = WAL")
         (when-let* ((process (emacsql-process conn))
                     (_ (processp process)))
           (set-process-query-on-exit-flag process nil))
@@ -299,7 +300,9 @@ The query is expected to be able to fail, in this situation, run HANDLER."
       (emacsql db [:create-table $i1 $S2] table schema))
     (pcase-dolist (`(,index-name ,table ,columns) org-roam-db--table-indices)
       (emacsql db [:create-index $i1 :on $i2 $S3] index-name table columns))
-    (emacsql db (format "PRAGMA user_version = %s" org-roam-db-version))))
+    (emacsql db (format "PRAGMA user_version = %s" org-roam-db-version))
+    (emacsql db "PRAGMA journal_mode = WAL")
+    ))
 
 (defun org-roam-db--upgrade-maybe (db version)
   "Upgrades the database schema for DB, if VERSION is old."
