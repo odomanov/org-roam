@@ -229,11 +229,11 @@ FILE is an Org-roam file if:
          (not match-exclude-regexp-p))))))
 
 ;;;###autoload
-(defun org-roam-list-files ()
+(defun org-roam-list-files (&optional dirs-to-exclude)
   "Return a list of all Org-roam files under `org-roam-directory'.
 See `org-roam-file-p' for how each file is determined to be as
 part of Org-Roam."
-  (org-roam--list-files (expand-file-name org-roam-directory)))
+  (org-roam--list-files (expand-file-name org-roam-directory) dirs-to-exclude))
 
 (defun org-roam-buffer-p (&optional buffer)
   "Return t if BUFFER is for an Org-roam file.
@@ -259,7 +259,7 @@ Like `file-name-extension', but does not strip version number."
                (not (eq 0 (match-beginning 0))))
           (substring file (+ (match-beginning 0) 1))))))
 
-(defun org-roam--list-files (dir)
+(defun org-roam--list-files (dir &optional dirs-to-exclude)
   "Return all Org-roam files located recursively within DIR.
 Use external shell commands if defined in `org-roam-list-files-commands'."
   (let (path exe)
@@ -283,7 +283,7 @@ Use external shell commands if defined in `org-roam-list-files-commands'."
               (files (seq-filter #'org-roam-file-p files))
               (files (mapcar #'expand-file-name files))) ; canonicalize names
         files
-      (org-roam--list-files-elisp dir))))
+      (org-roam--list-files-elisp dir dirs-to-exclude))))
 
 (defun org-roam--shell-command-files (cmd)
   "Run CMD in the shell and return a list of files.
@@ -328,13 +328,21 @@ E.g. (\".org\") => (\"*.org\" \"*.org.gpg\")"
 
 (declare-function org-roam--directory-files-recursively "org-roam-compat")
 
-(defun org-roam--list-files-elisp (dir)
-  "Return all Org-roam files under DIR, using Elisp based implementation."
+(defun org-roam--list-files-elisp (dir &optional exclude-dirs)
+  "Return all Org-roam files under DIR, using Elisp based implementation.
+EXCLUDE-DIRS is a list of dirs to be excluded."
   (let ((regex (concat "\\.\\(?:"(mapconcat
                                   #'regexp-quote org-roam-file-extensions
                                   "\\|" )"\\)\\(?:\\.gpg\\|\\.age\\)?\\'"))
         result)
-    (dolist (file (org-roam--directory-files-recursively dir regex nil nil t) result)
+    (defun fn-exclude-dirs (d)
+      "Auxilary function."
+      (if exclude-dirs
+          (member d exclude-dirs)
+        nil))
+    (dolist (file (org-roam--directory-files-recursively
+                   dir regex nil
+                   #'fn-exclude-dirs t) result)
       (when (and (file-readable-p file)
                  (org-roam-file-p file))
         (push file result)))))

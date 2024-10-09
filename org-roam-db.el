@@ -33,6 +33,7 @@
 (require 'org-roam)
 (require 'url-parse)
 (require 'ol)
+(require 'f)
 (defvar org-outline-path-cache)
 
 ;;; Options
@@ -142,6 +143,11 @@ ROAM_REFS."
   :package-version '(org-roam . "2.2.0")
   :group 'org-roam
   :type '(alist))
+
+(defcustom org-roam-wiki-directory (file-name-concat org-roam-directory "wiki")
+  "Wiki files directory."
+  :type 'string
+  :group 'org-roam)
 
 ;;; Variables
 (defconst org-roam-db-version 18)
@@ -671,20 +677,32 @@ in `org-roam-db-sync'."
               info
               (list #'org-roam-db-insert-citation)))))))))
 
+(defun org-roam-wiki-file-p (file)
+  "Check if FILE is a Wiki file."
+  (f-ancestor-of-p org-roam-wiki-directory file))
+
 ;;;###autoload
-(defun org-roam-db-sync (&optional force)
+(defun org-roam-db-sync (&optional force wiki)
   "Synchronize the cache state with the current Org files on-disk.
-If FORCE, force a rebuild of the cache from scratch."
-  (interactive "P")
+If FORCE, force a rebuild of the cache from scratch (Wiki included).
+If WIKI, include Wiki files."
+  (interactive "P\ni")
   (org-roam-db--close) ;; Force a reconnect
   (when force (delete-file org-roam-db-location))
   (org-roam-db) ;; To initialize the database, no-op if already initialized
   (org-roam-require '(org-ref oc))
+  (setq dirs-to-exclude (if wiki
+                            (list org-roam-wiki-directory)
+                          nil))
   (let* ((gc-cons-threshold org-roam-db-gc-threshold)
          (org-agenda-files nil)
-         (org-roam-files (org-roam-list-files))
+         (org-roam-files (org-roam-list-files dirs-to-exclude))
          (current-files (org-roam-db--get-current-files))
          (modified-files nil))
+    (unless force
+      (dolist (file (hash-table-keys current-files))
+        (when (org-roam-wiki-file-p file)
+          (remhash file current-files))))
     (dolist (file org-roam-files)
       (let ((contents-hash (org-roam-db--file-hash file)))
         (unless (string= (gethash file current-files)
