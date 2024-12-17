@@ -46,13 +46,14 @@
   '("CATEGORY" "ITEM" "FILE" "ALLTAGS" "ID" "PRIORITY" "TITLE"
     "REL" "TAGS" "TODO")
   "Properties to filter."
+  :type '(list string)
   :group 'org-roam)
 
 (defface org-roam-search--property-face
     '((t (:foreground "blue"
           :weight bold
           )))
-  "Face for 'properties' in search."
+  "Face for `properties' in search."
   :group 'org-roam-faces)
 
 (defun org-roam-search--completions ()
