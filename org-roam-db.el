@@ -690,6 +690,7 @@ If WIKI, include Wiki files."
   (org-roam-db--close) ;; Force a reconnect
   (when force (delete-file org-roam-db-location))
   (org-roam-db) ;; To initialize the database, no-op if already initialized
+  (thread-yield)
   (org-roam-require '(org-ref oc))
   (setq dirs-to-exclude (if wiki
                             (list org-roam-wiki-directory)
@@ -701,9 +702,11 @@ If WIKI, include Wiki files."
          (modified-files nil))
     (unless force
       (dolist (file (hash-table-keys current-files))
+        (thread-yield)
         (when (org-roam-wiki-file-p file)
           (remhash file current-files))))
     (dolist (file org-roam-files)
+      (thread-yield)
       (let ((contents-hash (org-roam-db--file-hash file)))
         (unless (string= (gethash file current-files)
                          contents-hash)
@@ -712,9 +715,11 @@ If WIKI, include Wiki files."
     (emacsql-with-transaction (org-roam-db)
       (org-roam-dolist-with-progress (file (hash-table-keys current-files))
           "Clearing removed files..."
+        (thread-yield)
         (org-roam-db-clear-file file))
       (org-roam-dolist-with-progress (file modified-files)
           "Processing modified files..."
+        (thread-yield)
         (condition-case err
             (org-roam-db-update-file file 'no-require)
           (error
