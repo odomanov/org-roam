@@ -169,27 +169,28 @@ ROAM_REFS."
 
 (defun org-roam-db--conn-fn ()
   "Return the function for creating the database connection."
-  (cl-case org-roam-database-connector
-    (sqlite
-     (progn
-       (require 'emacsql-sqlite)
-       #'emacsql-sqlite))
-    (sqlite-builtin
-     (progn
-       (require 'emacsql-sqlite-builtin)
-       #'emacsql-sqlite-builtin))
-    (sqlite-module
-     (progn
-       (require 'emacsql-sqlite-module)
-       #'emacsql-sqlite-module))
-    (libsqlite3
-     (progn
-       (require 'emacsql-libsqlite3)
-       #'emacsql-libsqlite3))
-    (sqlite3
-     (progn
-       (require 'emacsql-sqlite3)
-       #'emacsql-sqlite3))))
+  #'emacsql-sqlite-builtin)
+  ;; (cl-case org-roam-database-connector
+  ;;   (sqlite
+  ;;    (progn
+  ;;      (require 'emacsql-sqlite)
+  ;;      #'emacsql-sqlite))
+  ;;   (sqlite-builtin
+  ;;    (progn
+  ;;      (require 'emacsql-sqlite-builtin)
+  ;;      #'emacsql-sqlite-builtin))
+  ;;   (sqlite-module
+  ;;    (progn
+  ;;      (require 'emacsql-sqlite-module)
+  ;;      #'emacsql-sqlite-module))
+  ;;   (libsqlite3
+  ;;    (progn
+  ;;      (require 'emacsql-libsqlite3)
+  ;;      #'emacsql-libsqlite3))
+  ;;   (sqlite3
+  ;;    (progn
+  ;;      (require 'emacsql-sqlite3)
+  ;;      #'emacsql-sqlite3))))
 
 (defun org-roam-db ()
   "Entrypoint to the Org-roam sqlite database.
