@@ -246,6 +246,7 @@ The query is expected to be able to fail, in this situation, run HANDLER."
   '((files
      [(file :unique :primary-key)
       title
+      card-file
       (hash :not-null)
       (atime :not-null)
       (mtime :not-null)])
@@ -366,12 +367,22 @@ If there is no title, return the file name relative to
                                   (buffer-file-name (buffer-base-buffer))
                                   org-roam-directory)))))
 
+(defun org-roam-db--card-file ()
+  "Text file for the current LibCard.
+Returns nil if the current buffer is not a LibCard."
+  (save-excursion
+    (goto-char (point-min))
+    (when (search-forward ":Карточки:" nil t)
+      (re-search-forward "\\[\\[philtexts:\\([^]]+\\)\\]\\[" nil t)
+      (match-string-no-properties 1))))
+
 (defun org-roam-db-insert-file (&optional hash)
   "Update the files table for the current buffer.
 If UPDATE-P is non-nil, first remove the file in the database.
 If HASH is non-nil, use that as the file's hash without recalculating it."
   (let* ((file (buffer-file-name))
          (file-title (org-roam-db--file-title))
+         (card-file (org-roam-db--card-file))
          (attr (file-attributes file))
          (atime (file-attribute-access-time attr))
          (mtime (file-attribute-modification-time attr))
@@ -379,7 +390,7 @@ If HASH is non-nil, use that as the file's hash without recalculating it."
     (org-roam-db-query
      [:insert :into files
       :values $v1]
-     (list (vector file file-title hash atime mtime)))))
+     (list (vector file file-title card-file hash atime mtime)))))
 
 (defun org-roam-db-get-scheduled-time ()
   "Return the scheduled time at point in ISO8601 format."
