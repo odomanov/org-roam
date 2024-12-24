@@ -144,8 +144,8 @@ ROAM_REFS."
   :group 'org-roam
   :type '(alist))
 
-(defcustom org-roam-wiki-directory (file-name-concat org-roam-directory "wiki")
-  "Wiki files directory."
+(defcustom org-roam-mylibcat-directory (file-name-concat org-roam-directory "mylibcat")
+  "Mylibcat files directory."
   :type 'string
   :group 'org-roam)
 
@@ -373,7 +373,7 @@ Returns nil if the current buffer is not a LibCard."
   (save-excursion
     (goto-char (point-min))
     (when (search-forward ":Карточки:" nil t)
-      (re-search-forward "\\[\\[philtexts:\\([^]]+\\)\\]\\[" nil t)
+      (re-search-forward "\\[\\[mylib:\\([^]]+\\)\\]\\[" nil t)
       (match-string-no-properties 1))))
 
 (defun org-roam-db-insert-file (&optional hash)
@@ -689,23 +689,23 @@ in `org-roam-db-sync'."
               info
               (list #'org-roam-db-insert-citation)))))))))
 
-(defun org-roam-wiki-file-p (file)
-  "Check if FILE is a Wiki file."
-  (f-ancestor-of-p org-roam-wiki-directory file))
+(defun org-roam-mylibcat-file-p (file)
+  "Check if FILE is a Mylibcat file."
+  (f-ancestor-of-p org-roam-mylibcat-directory file))
 
 ;;;###autoload
-(defun org-roam-db-sync (&optional force wiki)
+(defun org-roam-db-sync (&optional force mylibcat)
   "Synchronize the cache state with the current Org files on-disk.
-If FORCE, force a rebuild of the cache from scratch (Wiki included).
-If WIKI, include Wiki files."
+If FORCE, force a rebuild of the cache from scratch (Mylibcat included).
+If MYLIBCAT, include Mylibcat files."
   (interactive "P\ni")
   (org-roam-db--close) ;; Force a reconnect
   (when force (delete-file org-roam-db-location))
   (org-roam-db) ;; To initialize the database, no-op if already initialized
   (thread-yield)
   (org-roam-require '(org-ref oc))
-  (setq dirs-to-exclude (if wiki
-                            (list org-roam-wiki-directory)
+  (setq dirs-to-exclude (if mylibcat
+                            (list org-roam-mylibcat-directory)
                           nil))
   (let* ((gc-cons-threshold org-roam-db-gc-threshold)
          (org-agenda-files nil)
@@ -715,7 +715,7 @@ If WIKI, include Wiki files."
     (unless force
       (dolist (file (hash-table-keys current-files))
         (thread-yield)
-        (when (org-roam-wiki-file-p file)
+        (when (org-roam-mylibcat-file-p file)
           (remhash file current-files))))
     (dolist (file org-roam-files)
       (thread-yield)
