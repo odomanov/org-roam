@@ -202,7 +202,11 @@ Performs a database upgrade when required."
       (make-directory (file-name-directory org-roam-db-location) t)
       (let ((conn (funcall (org-roam-db--conn-fn) org-roam-db-location)))
         (emacsql conn [:pragma (= foreign_keys ON)])
-        (emacsql conn "PRAGMA journal_mode = WAL")
+        ;; (emacsql conn "PRAGMA journal_mode = WAL")
+        (emacsql conn [:pragma (= journal_mode WAL)])
+        (emacsql conn [:pragma (= synchronous NORMAL)])
+        (emacsql conn [:pragma (= cache_size=-100000)])   ;100 MB
+        ;; (emacsql conn [:pragma (= temp_store = MEMORY)])
         (when-let* ((process (emacsql-process conn))
                     (_ (processp process)))
           (set-process-query-on-exit-flag process nil))
@@ -309,7 +313,7 @@ The query is expected to be able to fail, in this situation, run HANDLER."
     (pcase-dolist (`(,index-name ,table ,columns) org-roam-db--table-indices)
       (emacsql db [:create-index $i1 :on $i2 $S3] index-name table columns))
     (emacsql db (format "PRAGMA user_version = %s" org-roam-db-version))
-    (emacsql db "PRAGMA journal_mode = WAL")
+    ;; (emacsql db "PRAGMA journal_mode = WAL")
     ))
 
 (defun org-roam-db--upgrade-maybe (db version)
@@ -480,6 +484,7 @@ INFO is the org-element parsed buffer."
             :values $v1]
            (vector id file level pos todo priority
                    scheduled deadline title properties olp))
+          (thread-yield)
           (when tags
             (org-roam-db-query
              [:insert :into tags
@@ -487,7 +492,9 @@ INFO is the org-element parsed buffer."
              (mapcar (lambda (tag)
                        (vector id (substring-no-properties tag)))
                      tags)))
+          (thread-yield)
           (org-roam-db-insert-aliases)
+          (thread-yield)
           (org-roam-db-insert-refs))))))
 
 (cl-defun org-roam-db-insert-node-data ()
@@ -672,8 +679,10 @@ in `org-roam-db-sync'."
            (org-refresh-category-properties)
            (org-roam-db-clear-file)
            (org-roam-db-insert-file content-hash)
+           (thread-yield)
            (org-roam-db-insert-file-node)
            (setq org-outline-path-cache nil)
+           (thread-yield)
            (org-roam-db-map-nodes
             (list #'org-roam-db-insert-node-data
                   #'org-roam-db-insert-aliases
@@ -681,6 +690,7 @@ in `org-roam-db-sync'."
                   #'org-roam-db-insert-refs))
            (setq org-outline-path-cache nil)
            (setq info (org-element-parse-buffer))
+           (thread-yield)
            (org-roam-db-map-links
             (list #'org-roam-db-insert-link))
            (when (fboundp 'org-cite-insert)
