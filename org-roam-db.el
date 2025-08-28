@@ -594,6 +594,23 @@ INFO is the org-element parsed buffer."
                             :values $v1]
                            rows)))))
 
+(defun org-roam-db-insert-headline-link ()
+  "Insert link data for headline at current point into the Org-roam cache.
+Point should be at the beginning of headline."
+  (save-excursion
+    (let ((path (org-entry-get (point) "ID"))
+          (hl-point (point))
+          (properties (list :outline (ignore-errors
+                                       ;; This can error if link is not under any headline
+                                       (org-get-outline-path 'with-self 'use-cache)))))
+      (when path
+        (org-roam-up-heading-or-point-min)
+        (when-let* ((source (org-roam-id-at-point))) ;traverses up
+          (org-roam-db-query
+           [:insert :into links
+                    :values $v1]
+           (vector hl-point source path "heading" properties)))))))
+
 (defun org-roam-db-insert-link (link)
   "Insert link data for LINK at current point into the Org-roam cache."
   (save-excursion
@@ -693,6 +710,7 @@ in `org-roam-db-sync'."
            (thread-yield)
            (org-roam-db-map-links
             (list #'org-roam-db-insert-link))
+           (org-map-entries #'org-roam-db-insert-headline-link)
            (when (fboundp 'org-cite-insert)
              (require 'oc)             ;ensure feature is loaded
              (org-roam-db-map-citations
