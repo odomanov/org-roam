@@ -205,8 +205,8 @@ Performs a database upgrade when required."
         ;; (emacsql conn "PRAGMA journal_mode = WAL")
         (emacsql conn [:pragma (= journal_mode WAL)])
         (emacsql conn [:pragma (= synchronous NORMAL)])
-        (emacsql conn [:pragma (= cache_size=-100000)])   ;100 MB
-        ;; (emacsql conn [:pragma (= temp_store = MEMORY)])
+        (emacsql conn [:pragma (= cache_size -200000)])   ;200 MB
+        (emacsql conn [:pragma (= temp_store MEMORY)])
         (when-let* ((process (emacsql-process conn))
                     (_ (processp process)))
           (set-process-query-on-exit-flag process nil))
